@@ -411,9 +411,13 @@ def main() -> None:
     run_dir = dest_root / datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    for file in src.iterdir():
-        if file.suffix.lower() not in {".json", ".txt"}:
-            continue
+    files = sorted(
+        p
+        for p in src.rglob("*")
+        if p.is_file() and p.suffix.lower() in {".json", ".txt"}
+    )
+
+    for file in files:
         out_file = run_dir / (file.stem + ".html")
         process_file(file, out_file)
 
