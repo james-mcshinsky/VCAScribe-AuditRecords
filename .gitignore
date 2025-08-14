@@ -1,0 +1,11 @@
+# Ignore macOS Finder metadata
+.DS_Store
+
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual environment directories
+venv/
+.env/
+.pytest_cache/
