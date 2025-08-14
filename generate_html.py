@@ -177,7 +177,7 @@ def render_sections(model_one_str: str, card_model_str: str) -> str:
             format_patient_history_model_one(m1.get("PatientHistory")),
             format_patient_history_card_model(cm.get("PatientHistory")),
         ),
-        ("TPR", format_tpr_model_one(m1.get("TPR")), format_tpr_card_model(cm.get("TPR"))),
+        ("Vitals", format_tpr_model_one(m1.get("TPR")), format_tpr_card_model(cm.get("TPR"))),
         (
             "Physical Exam Findings",
             format_pef_model_one(m1.get("PhysicalExamFindings")),
@@ -195,11 +195,20 @@ def render_sections(model_one_str: str, card_model_str: str) -> str:
         ),
     ]
 
-    rows = ["<table class='comparison'>", "<tr><th>Section</th><th>Original AI Output</th><th>Sent to WOOFware</th></tr>"]
+    pieces = ["<section class=\"note-section\">"]
     for name, left, right in sections:
-        rows.append(f"<tr><th>{name}</th><td>{left}</td><td>{right}</td></tr>")
-    rows.append("</table>")
-    return "".join(rows)
+        pieces.append(
+            "<section class=\"display_grid gap-16\" style=\"margin-bottom: 16px;\">"
+            f"<h3 style=\"text-decoration: underline; text-transform: uppercase; letter-spacing: 1px; text-underline-offset: 4px;\">{name}</h3>"
+            "<div class=\"display_grid grid-template-columns_1fr_1fr gap-16\">"
+            "<table><thead><tr><th>Original AI Output</th></tr></thead>"
+            f"<tbody><tr><td>{left}</td></tr></tbody></table>"
+            "<table><thead><tr><th>Sent to WOOFware</th></tr></thead>"
+            f"<tbody><tr><td>{right}</td></tr></tbody></table>"
+            "</div></section>"
+        )
+    pieces.append("</section>")
+    return "".join(pieces)
 
 
 def render_html(payload: dict) -> str:
@@ -213,7 +222,11 @@ def render_html(payload: dict) -> str:
             " table{border-collapse:collapse;width:100%}"
             " th,td{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top;white-space:pre-wrap;word-break:break-word}"
             " .transcription{border:1px solid #ccc;padding:10px;margin:20px 0}"
-            " .comparison th{background:#f0f0f0;width:20%}"
+            " .note-section{border:1px solid #ccc;padding:16px;margin:20px 0}"
+            " .display_grid{display:grid}"
+            " .gap-16{gap:16px}"
+            " .grid-template-columns_1fr_1fr{grid-template-columns:1fr 1fr}"
+            " .note-section table th{background:#f0f0f0}"
             "</style>"
         ),
         "</head><body>",
