@@ -9,3 +9,9 @@ __pycache__/
 venv/
 .env/
 .pytest_cache/
+
+# Runtime data
+records/*
+!records/.gitkeep
+results/*
+!results/.gitkeep
