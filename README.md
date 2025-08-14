@@ -15,7 +15,8 @@ VCAScribe-AuditRecords/
 ```
 
 Running the script with no arguments converts every `.json` or `.txt` file in
-`records` and writes the HTML reports to `results/<filename>/<filename>.html`:
+`records` (recursively) and writes an HTML report for each to a time-stamped
+subdirectory of `results`:
 
 ```
 python generate_html.py
@@ -28,7 +29,7 @@ VCAScribe-AuditRecords/
 ├── records/
 │   └── some_file.json
 ├── results/
-│   └── some_file/
+│   └── 20240605-123456/
 │       └── some_file.html
 └── generate_html.py
 ```
