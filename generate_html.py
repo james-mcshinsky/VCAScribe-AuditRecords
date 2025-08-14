@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate HTML reports from appointment JSON payloads.
+"""Generate HTML and PDF reports from appointment JSON payloads.
 
 The script reads all ``.json`` or ``.txt`` files in the ``records`` directory
-and writes an HTML report for each into a time-stamped subdirectory of
+and writes an HTML and PDF report for each into a time-stamped subdirectory of
 ``results``. It is designed to run with no command line arguments:
 
 ```
@@ -10,9 +10,11 @@ python generate_html.py
 ```
 """
 import json
-from pathlib import Path
-from html import escape
 from datetime import datetime
+from html import escape
+from pathlib import Path
+
+from weasyprint import HTML
 
 
 def safe(value):
@@ -315,16 +317,18 @@ def render_html(payload: dict) -> str:
         "<!DOCTYPE html>",
         "<html><head><meta charset='utf-8'>",
         (
-            "<style>body{font-family:Arial;margin:20px auto;max-width:900px}"
-            " table{border-collapse:collapse;width:100%}"
-            " th,td{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top;white-space:pre-wrap;word-break:break-word}"
-            " .transcription{border:1px solid #ccc;padding:10px;margin:20px 0}"
+            "<style>"
+            "body{font-family:'Helvetica Neue',Arial,sans-serif;margin:40px auto;max-width:900px;line-height:1.6;color:#333}"
+            "h1,h2,h3{color:#2c3e50}"
+            "table{border-collapse:collapse;width:100%;margin-bottom:20px}"
+            "th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:top;white-space:pre-wrap;word-break:break-word}"
+            "th{background:#f8f8f8}"
+            " .transcription{border:1px solid #ccc;padding:16px;margin:20px 0;background:#fafafa}"
             " .note-section{border:1px solid #ccc;padding:16px;margin:20px 0}"
             " .display_grid{display:grid}"
             " .gap-16{gap:16px}"
             " .display_flex{display:flex}"
             " .grid-template-columns_1fr_1fr{grid-template-columns:1fr 1fr}"
-            " .note-section table th{background:#f0f0f0}"
             "</style>"
         ),
         "</head><body>",
@@ -393,15 +397,20 @@ def render_html(payload: dict) -> str:
     return "\n".join(pieces)
 
 
-def process_file(src: Path, dest: Path) -> None:
+def process_file(src: Path, dest_html: Path) -> None:
     payload = json.loads(src.read_text(encoding="utf-8"))
     html = render_html(payload)
-    dest.write_text(html, encoding="utf-8")
-    print(f"Report written to {dest}")
+    dest_html.write_text(html, encoding="utf-8")
+    print(f"Report written to {dest_html}")
+
+    # Convert the HTML report to PDF using WeasyPrint.
+    dest_pdf = dest_html.with_suffix(".pdf")
+    HTML(string=html).write_pdf(dest_pdf)
+    print(f"PDF written to {dest_pdf}")
 
 
 def main() -> None:
-    """Convert all files in ``records`` to HTML in ``results``."""
+    """Convert all files in ``records`` to HTML and PDF in ``results``."""
     src = Path("records")
     dest_root = Path("results")
 
