@@ -71,22 +71,30 @@ def format_tpr_model_one(data):
 def format_tpr_card_model(data):
     if not data:
         return ""
-    lines = []
+    cells = []
     for vital in data:
-        label = vital.get("label") or vital.get("key")
-        parts = []
-        val = vital.get("value")
+        label = vital.get("label") or vital.get("key") or ""
         unit = vital.get("unit")
+        value = vital.get("value")
         comment = vital.get("comment")
-        if val is not None:
-            parts.append(str(val))
-        if unit:
-            parts.append(unit)
+        label_text = f"{label} ({unit})" if unit else label
+        pieces = [
+            '<td style="max-width: 180px; padding: 0 8px;">',
+            '<section class="display_grid">',
+            f"<h4>{safe(label_text)}</h4>",
+        ]
+        if value is not None:
+            pieces.append(f"<span>{safe(value)}</span>")
         if comment:
-            parts.append(comment)
-        line = f"{label}: {' '.join(parts)}" if parts else label
-        lines.append(line)
-    return "<br>".join(safe(line) for line in lines)
+            pieces.append(f"<span>{safe(comment)}</span>")
+        pieces.append("</section></td>")
+        cells.append("".join(pieces))
+    row = (
+        '<tr class="display_flex gap-16" style="flex-flow: wrap;">'
+        + "".join(cells)
+        + "</tr>"
+    )
+    return "<table><tbody>" + row + "</tbody></table>"
 
 
 def format_pef_model_one(data):
