@@ -41,11 +41,53 @@ def format_patient_history_model_one(_):
 
 
 def format_patient_history_card_model(data):
+    """Render patient history card model data as a table."""
+
     if not data:
         return ""
-    if isinstance(data, list):
-        return "<br>".join(safe(item) for item in data if item)
-    return safe(data)
+
+    def render_concerns(concerns: dict) -> str:
+        pieces = ['<div class="display_grid gap-16">']
+        for key, label in [("active", "Active"), ("resolved", "Resolved"), ("inactive", "Inactive")]:
+            items = concerns.get(key)
+            if items:
+                pieces.append(
+                    f'<h4 style="text-decoration: underline; text-underline-offset: 4px;">{label}</h4>'
+                )
+                pieces.append("<ul>")
+                for item in items:
+                    pieces.append(f"<li>{safe(item)}</li>")
+                pieces.append("</ul>")
+        pieces.append("</div>")
+        return "".join(pieces)
+
+    if isinstance(data, dict):
+        items = [{"label": k, "value": v} for k, v in data.items()]
+    elif isinstance(data, list):
+        items = data
+    else:
+        return safe(data)
+
+    rows = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        label = item.get("label") or item.get("key") or ""
+        value = item.get("value")
+        if isinstance(value, dict) and {"active", "resolved", "inactive"} & value.keys():
+            value_html = render_concerns(value)
+        elif isinstance(value, list):
+            value_html = "<br>".join(safe(v) for v in value if v)
+        else:
+            value_html = safe(value)
+        rows.append(
+            '<tr class="display_flex gap-16" style="flex-flow: wrap;">'
+            f'<td style="font-weight:600; min-width:150px;">{safe(label)}</td>'
+            f'<td>{value_html}</td>'
+            "</tr>"
+        )
+
+    return "<table><tbody>" + "".join(rows) + "</tbody></table>"
 
 
 def format_tpr_model_one(data):
@@ -135,9 +177,9 @@ def format_hsa_card_model(data):
 def format_ap_model_one(data):
     if not data:
         return ""
-    pieces = []
+    blocks = []
     for item in data:
-        problems = ", ".join(item.get("ProblemsOrConcerns", []))
+        concerns = ", ".join(item.get("ProblemsOrConcerns", []))
         assessment = item.get("Assessment", {}).get("Assessment")
         plan = item.get("Plan", {})
         plan_parts = []
@@ -152,27 +194,74 @@ def format_ap_model_one(data):
         for key, label in labels:
             val = plan.get(key)
             if val:
-                plan_parts.append(f"<strong>{label}:</strong> {safe(val)}")
-        block = []
-        if problems:
-            block.append(f"<strong>Problems/Concerns:</strong> {safe(problems)}")
+                plan_parts.append(f"<p><strong>{label}:</strong> {safe(val)}</p>")
+        assess_parts = []
+        if concerns:
+            assess_parts.append(f"<p><strong>Concerns:</strong> {safe(concerns)}</p>")
         if assessment:
-            block.append(f"<strong>Assessment:</strong> {safe(assessment)}")
-        if plan_parts:
-            block.append("<strong>Plan:</strong> " + "<br>".join(plan_parts))
-        pieces.append("<p>" + "<br>".join(block) + "</p>")
-    return "".join(pieces)
+            assess_parts.append(f"<p>{safe(assessment)}</p>")
+        block = (
+            '<div class="display_grid gap-16">'
+            '<div>'
+            '<h4 style="text-decoration: underline; text-underline-offset: 4px;">Assessments</h4>'
+            + "".join(assess_parts)
+            + '</div>'
+            '<div>'
+            '<h4 style="text-decoration: underline; text-underline-offset: 4px;">Plans</h4>'
+            + "".join(plan_parts)
+            + '</div>'
+            '</div>'
+        )
+        blocks.append(block)
+    return "".join(blocks)
 
 
 def format_ap_card_model(data):
     if not data:
         return ""
-    pieces = []
+    blocks = []
     for item in data:
-        assessment = item.get("assessment", {}).get("assessment", "")
-        plan = item.get("plan", {}).get("plan", "")
-        pieces.append(assessment + plan)
-    return "".join(pieces)
+        concerns = item.get("concerns")
+        assessment_section = item.get("assessment") or {}
+        assessment_text = (
+            assessment_section.get("assessment") if isinstance(assessment_section, dict) else assessment_section
+        )
+        plan_section = item.get("plan") or {}
+        plan_parts = []
+        if isinstance(plan_section, dict):
+            for k, v in plan_section.items():
+                if not v:
+                    continue
+                if isinstance(v, list):
+                    val = ", ".join(safe(i) for i in v if i)
+                else:
+                    val = safe(v)
+                plan_parts.append(f"<p><strong>{safe(k)}:</strong> {val}</p>")
+        else:
+            plan_parts.append(f"<p>{safe(plan_section)}</p>")
+        assess_parts = []
+        if concerns:
+            if isinstance(concerns, list):
+                concerns_val = ", ".join(safe(c) for c in concerns if c)
+            else:
+                concerns_val = safe(concerns)
+            assess_parts.append(f"<p><strong>Concerns:</strong> {concerns_val}</p>")
+        if assessment_text:
+            assess_parts.append(f"<p>{safe(assessment_text)}</p>")
+        block = (
+            '<div class="display_grid gap-16">'
+            '<div>'
+            '<h4 style="text-decoration: underline; text-underline-offset: 4px;">Assessments</h4>'
+            + "".join(assess_parts)
+            + '</div>'
+            '<div>'
+            '<h4 style="text-decoration: underline; text-underline-offset: 4px;">Plans</h4>'
+            + "".join(plan_parts)
+            + '</div>'
+            '</div>'
+        )
+        blocks.append(block)
+    return "".join(blocks)
 
 
 def render_sections(model_one_str: str, card_model_str: str) -> str:
@@ -233,6 +322,7 @@ def render_html(payload: dict) -> str:
             " .note-section{border:1px solid #ccc;padding:16px;margin:20px 0}"
             " .display_grid{display:grid}"
             " .gap-16{gap:16px}"
+            " .display_flex{display:flex}"
             " .grid-template-columns_1fr_1fr{grid-template-columns:1fr 1fr}"
             " .note-section table th{background:#f0f0f0}"
             "</style>"
