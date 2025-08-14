@@ -18,18 +18,44 @@ def safe(value):
     """Return HTML-escaped text or an empty string."""
     return escape(str(value)) if value is not None else ""
 
+
+def safe_pre(value):
+    """Escape text for use inside a ``<pre>`` block, preserving quotes."""
+    return escape(str(value), quote=False) if value is not None else ""
+
+def format_json(value: str) -> str:
+    """Return pretty-printed JSON for ``value`` if possible."""
+
+    if not value:
+        return ""
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        return value
+    return json.dumps(parsed, indent=2, sort_keys=True)
+
+
 def render_html(payload: dict) -> str:
-    """Render a minimal HTML report with selected fields."""
+    """Render an HTML report with appointment details and transcriptions."""
 
     pieces = [
         "<!DOCTYPE html>",
         "<html><head><meta charset='utf-8'>",
-        "<style>body{font-family:Arial} table{border-collapse:collapse} th,td{border:1px solid #ccc;padding:4px;}</style>",
+        (
+            "<style>body{font-family:Arial;margin:20px}"
+            " table{border-collapse:collapse}"
+            " th,td{border:1px solid #ccc;padding:4px;text-align:left}"
+            " .transcription{border:1px solid #ccc;padding:10px;margin:20px 0}"
+            " .models{display:flex;gap:20px}"
+            " .model{flex:1}"
+            " .model pre{border:1px solid #ccc;padding:10px;overflow:auto}"
+            "</style>"
+        ),
         "</head><body>",
     ]
 
     for appt in payload.get("data", []):
-        pieces.append("<h1>Appointment</h1>")
+        pieces.append("<h1>Appointment and Patient Information</h1>")
         pieces.append("<table>")
         appt_rows = [
             ("Client First Name", safe(appt.get("clientFirstName"))),
@@ -46,32 +72,53 @@ def render_html(payload: dict) -> str:
             ("Neutered", safe(appt.get("neutered"))),
             ("Pet Age", safe(appt.get("petAge"))),
         ]
-        pieces.extend(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in appt_rows)
+
+        scribe_info = []
+        scribe_sections = []
+        for scribe in appt.get("scribes", []):
+            scribe_info.extend(
+                [
+                    ("Scribe ID", safe(scribe.get("scribeId"))),
+                    ("Appointment ID", safe(scribe.get("appointmentId"))),
+                    ("Recorded Duration", safe(scribe.get("recordedDuration"))),
+                    ("Scribe Title", safe(scribe.get("scribeTitle"))),
+                    ("Created By", safe(scribe.get("createdBy"))),
+                    ("Updated By", safe(scribe.get("updatedBy"))),
+                    ("Created Time", safe(scribe.get("createdTime"))),
+                    ("Patient ID", safe(scribe.get("patientId"))),
+                    ("Pet Appointment ID", safe(scribe.get("petAppointmentId"))),
+                    ("Patient Name", safe(scribe.get("patientName"))),
+                    ("Exam ID", safe(scribe.get("examId"))),
+                    ("Medical Note ID", safe(scribe.get("medicalNoteId"))),
+                    ("Resource Name", safe(scribe.get("resourceName"))),
+                ]
+            )
+
+            transcription_text = safe(scribe.get("transcriptionText"))
+            model_one = safe_pre(format_json(scribe.get("transcriptionModelOne")))
+            card_model = safe_pre(format_json(scribe.get("transcriptionCardModel")))
+
+            scribe_sections.append(
+                [transcription_text, model_one, card_model]
+            )
+
+        pieces.extend(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in appt_rows + scribe_info)
         pieces.append("</table>")
 
-        for scribe in appt.get("scribes", []):
-            pieces.append("<h2>Scribe</h2>")
-            pieces.append("<table>")
-            scribe_rows = [
-                ("Scribe ID", safe(scribe.get("scribeId"))),
-                ("Appointment ID", safe(scribe.get("appointmentId"))),
-                ("Recorded Duration", safe(scribe.get("recordedDuration"))),
-                ("Scribe Title", safe(scribe.get("scribeTitle"))),
-                ("Created By", safe(scribe.get("createdBy"))),
-                ("Updated By", safe(scribe.get("updatedBy"))),
-                ("Created Time", safe(scribe.get("createdTime"))),
-                ("Patient ID", safe(scribe.get("patientId"))),
-                ("Pet Appointment ID", safe(scribe.get("petAppointmentId"))),
-                ("Patient Name", safe(scribe.get("patientName"))),
-                ("Transcription Text", safe(scribe.get("transcriptionText"))),
-                ("Transcription Model One", safe(scribe.get("transcriptionModelOne"))),
-                ("Transcription Card Model", safe(scribe.get("transcriptionCardModel"))),
-                ("Exam ID", safe(scribe.get("examId"))),
-                ("Medical Note ID", safe(scribe.get("medicalNoteId"))),
-                ("Resource Name", safe(scribe.get("resourceName"))),
-            ]
-            pieces.extend(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in scribe_rows)
-            pieces.append("</table>")
+        for transcription_text, model_one, card_model in scribe_sections:
+            pieces.append("<div class='transcription'><h2>Transcription</h2><p>" + transcription_text + "</p></div>")
+            pieces.append("<div class='models'>")
+            pieces.append(
+                "<div class='model'><h2>Original AI Output</h2><pre>"
+                + model_one
+                + "</pre></div>"
+            )
+            pieces.append(
+                "<div class='model'><h2>Sent to WOOFware</h2><pre>"
+                + card_model
+                + "</pre></div>"
+            )
+            pieces.append("</div>")
 
     pieces.append("</body></html>")
     return "\n".join(pieces)
