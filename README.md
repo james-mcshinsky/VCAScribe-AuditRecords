@@ -1,6 +1,6 @@
 # VCAScribe-AuditRecords
 
-Utility for converting appointment JSON payloads into simple HTML reports.
+Utility for converting appointment JSON payloads into polished HTML and PDF reports.
 
 ## Usage
 
@@ -15,7 +15,7 @@ VCAScribe-AuditRecords/
 ```
 
 Running the script with no arguments converts every `.json` or `.txt` file in
-`records` (recursively) and writes an HTML report for each to a time-stamped
+`records` (recursively) and writes HTML and PDF reports for each to a time-stamped
 subdirectory of `results`:
 
 ```
@@ -30,6 +30,7 @@ VCAScribe-AuditRecords/
 │   └── some_file.json
 ├── results/
 │   └── 20240605-123456/
-│       └── some_file.html
+│       ├── some_file.html
+│       └── some_file.pdf
 └── generate_html.py
 ```
