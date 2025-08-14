@@ -10,12 +10,22 @@ python generate_html.py
 ```
 """
 import json
+import re
+import html
 from pathlib import Path
 from html import escape
 
 def safe(value):
     """Return HTML‑escaped text or an empty string."""
     return escape(str(value)) if value is not None else ""
+
+
+def strip_tags(text: str) -> str:
+    """Remove basic HTML tags and unescape entities."""
+    if not text:
+        return ""
+    text = re.sub(r"<[^>]+>", "", text)
+    return html.unescape(text)
 
 def render_html(payload: dict) -> str:
     pieces = [
@@ -84,6 +94,49 @@ def render_html(payload: dict) -> str:
 
                 except json.JSONDecodeError:
                     pieces.append("<p><em>Failed to parse transcriptionModelOne</em></p>")
+
+            card = scribe.get("transcriptionCardModel")
+            if card:
+                try:
+                    card = json.loads(card)
+
+                    concerns = card.get("Concerns", [])
+                    if concerns:
+                        pieces.append("<h3>Concerns</h3><ul>")
+                        for c in concerns:
+                            name = c.get("concern") or c.get("concernName") or c.get("label")
+                            if name:
+                                pieces.append(f"<li>{safe(name)}</li>")
+                        pieces.append("</ul>")
+
+                    tpr_list = card.get("TPR", [])
+                    if tpr_list:
+                        pieces.append("<h3>TPR (Card Model)</h3><ul>")
+                        for item in tpr_list:
+                            label = item.get("label") or item.get("key") or "TPR"
+                            parts = []
+                            if item.get("value") is not None:
+                                parts.append(str(item.get("value")))
+                            if item.get("unit"):
+                                parts.append(item.get("unit"))
+                            line = f"{label}: {' '.join(parts)}".strip()
+                            if item.get("comment"):
+                                line += f" ({item['comment']})"
+                            pieces.append(f"<li>{safe(line)}</li>")
+                        pieces.append("</ul>")
+
+                    plans = card.get("AssessmentAndPlan", [])
+                    if plans:
+                        pieces.append("<h3>Assessment &amp; Plan (Card Model)</h3>")
+                        for block in plans:
+                            assess = strip_tags(block.get("assessment", {}).get("assessment"))
+                            if assess:
+                                pieces.append(f"Assessment: {safe(assess)}<br>")
+                            plan_text = strip_tags(block.get("plan", {}).get("plan"))
+                            if plan_text:
+                                pieces.append(f"Plan: {safe(plan_text)}<br>")
+                except json.JSONDecodeError:
+                    pieces.append("<p><em>Failed to parse transcriptionCardModel</em></p>")
 
     pieces.append("</body></html>")
     return "\n".join(pieces)
