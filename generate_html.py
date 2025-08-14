@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""
-generate_html.py
+"""Generate HTML reports from appointment JSON payloads.
 
-Usage:
-    python generate_html.py input.json output.html
-    python generate_html.py input_dir output_dir
+The script reads all ``.json`` or ``.txt`` files in the ``records`` directory
+and writes an HTML report for each into a matching subdirectory of
+``results``. It is designed to run with no command line arguments:
+
+```
+python generate_html.py
+```
 """
 import json
-import sys
 from pathlib import Path
 from html import escape
 
@@ -94,31 +96,23 @@ def process_file(src: Path, dest: Path) -> None:
     print(f"Report written to {dest}")
 
 
-def main():
-    if len(sys.argv) != 3:
-        print(
-            "Usage: python generate_html.py input.json output.html\n"
-            "       python generate_html.py input_dir output_dir"
-        )
-        sys.exit(1)
+def main() -> None:
+    """Convert all files in ``records`` to HTML in ``results``."""
+    src = Path("records")
+    dest = Path("results")
 
-    src = Path(sys.argv[1])
-    dest = Path(sys.argv[2])
+    if not src.exists() or not src.is_dir():
+        raise SystemExit("records directory not found")
 
-    if src.is_dir():
-        dest.mkdir(parents=True, exist_ok=True)
-        for file in src.iterdir():
-            if file.suffix.lower() not in {".json", ".txt"}:
-                continue
-            subdir = dest / file.stem
-            subdir.mkdir(parents=True, exist_ok=True)
-            out_file = subdir / (file.stem + ".html")
-            process_file(file, out_file)
-    else:
-        if dest.is_dir():
-            dest = dest / (src.stem + ".html")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        process_file(src, dest)
+    dest.mkdir(parents=True, exist_ok=True)
+
+    for file in src.iterdir():
+        if file.suffix.lower() not in {".json", ".txt"}:
+            continue
+        subdir = dest / file.stem
+        subdir.mkdir(parents=True, exist_ok=True)
+        out_file = subdir / (file.stem + ".html")
+        process_file(file, out_file)
 
 if __name__ == "__main__":
     main()

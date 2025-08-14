@@ -4,32 +4,31 @@ Utility for converting appointment JSON payloads into simple HTML reports.
 
 ## Usage
 
-Process a single JSON file:
-
-    python generate_html.py input.json output.html
-
-Process a directory of JSON or text files (each containing JSON) and write the HTML reports to subfolders:
-
-    python generate_html.py input_dir results_dir
-
-Each input file produces `results_dir/<filename>/<filename>.html`.
-
-### Folder layout
-
-The script expects you to provide explicit paths for the input and output folders. A common layout is:
-
-- Place the JSON or text files to be processed in a folder named `records` at the repository root:
-
-  `VCAScribe-AuditRecords/records/`
-
-- Choose a folder for the generated HTML, such as `results`, also at the repository root:
-
-  `VCAScribe-AuditRecords/results/`
-
-Run the command using these paths:
+Place the JSON or text files to be processed in a folder named `records` at
+the repository root:
 
 ```
-python generate_html.py records results
+VCAScribe-AuditRecords/
+├── generate_html.py
+├── records/
+└── ...
 ```
 
-Each JSON file in `records` will produce an HTML report in `results/<filename>/<filename>.html`.
+Running the script with no arguments converts every `.json` or `.txt` file in
+`records` and writes the HTML reports to `results/<filename>/<filename>.html`:
+
+```
+python generate_html.py
+```
+
+After execution the directory structure will resemble:
+
+```
+VCAScribe-AuditRecords/
+├── records/
+│   └── some_file.json
+├── results/
+│   └── some_file/
+│       └── some_file.html
+└── generate_html.py
+```
