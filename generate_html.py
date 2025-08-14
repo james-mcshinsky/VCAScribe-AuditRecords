@@ -22,74 +22,8 @@ def safe(value):
     return escape(str(value)) if value is not None else ""
 
 
-def to_html(value):
-    """Recursively convert ``value`` into a nested ``<ul>`` structure."""
-
-    if value in (None, ""):
-        return ""
-    if isinstance(value, dict):
-        items = [
-            f"<li><strong>{escape(str(k))}:</strong> {to_html(v)}</li>" for k, v in value.items()
-        ]
-        return "<ul>" + "".join(items) + "</ul>"
-    if isinstance(value, list):
-        items = [f"<li>{to_html(v)}</li>" for v in value]
-        return "<ul>" + "".join(items) + "</ul>"
-    return escape(str(value))
-
-
 def format_patient_history_model_one(_):
     return ""
-
-
-def format_patient_history_card_model(data):
-    """Render patient history card model data as a table."""
-
-    if not data:
-        return ""
-
-    def render_concerns(concerns: dict) -> str:
-        pieces = ['<div class="display_grid gap-16">']
-        for key, label in [("active", "Active"), ("resolved", "Resolved"), ("inactive", "Inactive")]:
-            items = concerns.get(key)
-            if items:
-                pieces.append(
-                    f'<h4 style="text-decoration: underline; text-underline-offset: 4px;">{label}</h4>'
-                )
-                pieces.append("<ul>")
-                for item in items:
-                    pieces.append(f"<li>{safe(item)}</li>")
-                pieces.append("</ul>")
-        pieces.append("</div>")
-        return "".join(pieces)
-
-    if isinstance(data, dict):
-        items = [{"label": k, "value": v} for k, v in data.items()]
-    elif isinstance(data, list):
-        items = data
-    else:
-        return safe(data)
-
-    rows = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        label = item.get("label") or item.get("key") or ""
-        value = item.get("value")
-        if isinstance(value, dict) and {"active", "resolved", "inactive"} & value.keys():
-            value_html = render_concerns(value)
-        elif isinstance(value, list):
-            value_html = "<br>".join(safe(v) for v in value if v)
-        else:
-            value_html = safe(value)
-        rows.append(
-            '<tr class="display_flex gap-16" style="flex-flow: wrap;">'
-            f'<td style="font-weight:600; min-width:150px;">{safe(label)}</td>'
-            f'<td>{value_html}</td>'
-            "</tr>"
-        )
-
-    return "<table><tbody>" + "".join(rows) + "</tbody></table>"
 
 
 def format_tpr_model_one(data):
@@ -112,35 +46,6 @@ def format_tpr_model_one(data):
     return "<br>".join(safe(line) for line in lines)
 
 
-def format_tpr_card_model(data):
-    if not data:
-        return ""
-    cells = []
-    for vital in data:
-        label = vital.get("label") or vital.get("key") or ""
-        unit = vital.get("unit")
-        value = vital.get("value")
-        comment = vital.get("comment")
-        label_text = f"{label} ({unit})" if unit else label
-        pieces = [
-            '<td style="max-width: 180px; padding: 0 8px;">',
-            '<section class="display_grid">',
-            f"<h4>{safe(label_text)}</h4>",
-        ]
-        if value is not None:
-            pieces.append(f"<span>{safe(value)}</span>")
-        if comment:
-            pieces.append(f"<span>{safe(comment)}</span>")
-        pieces.append("</section></td>")
-        cells.append("".join(pieces))
-    row = (
-        '<tr class="display_flex gap-16" style="flex-flow: wrap;">'
-        + "".join(cells)
-        + "</tr>"
-    )
-    return "<table><tbody>" + row + "</tbody></table>"
-
-
 def format_pef_model_one(data):
     if not data:
         return ""
@@ -152,28 +57,6 @@ def format_pef_model_one(data):
             if struct or finding:
                 lines.append(f"{struct}: {finding}")
     return "<br>".join(safe(line) for line in lines)
-
-
-def format_pef_card_model(data):
-    if not data:
-        return ""
-    lines = []
-    for item in data:
-        sub = item.get("subCategory") or item.get("category")
-        obs = item.get("observation")
-        comment = item.get("comment")
-        parts = [p for p in [obs, comment] if p]
-        if sub and parts:
-            lines.append(f"{sub}: {' - '.join(parts)}")
-    return "<br>".join(safe(line) for line in lines)
-
-
-def format_hsa_card_model(data):
-    if not data:
-        return ""
-    if isinstance(data, list):
-        return "<br>".join(to_html(item) for item in data)
-    return to_html(data)
 
 
 def format_ap_model_one(data):
@@ -218,92 +101,24 @@ def format_ap_model_one(data):
     return "".join(blocks)
 
 
-def format_ap_card_model(data):
-    if not data:
-        return ""
-    blocks = []
-    for item in data:
-        concerns = item.get("concerns")
-        assessment_section = item.get("assessment") or {}
-        assessment_text = (
-            assessment_section.get("assessment") if isinstance(assessment_section, dict) else assessment_section
-        )
-        plan_section = item.get("plan") or {}
-        plan_parts = []
-        if isinstance(plan_section, dict):
-            for k, v in plan_section.items():
-                if not v:
-                    continue
-                if isinstance(v, list):
-                    val = ", ".join(safe(i) for i in v if i)
-                else:
-                    val = safe(v)
-                plan_parts.append(f"<p><strong>{safe(k)}:</strong> {val}</p>")
-        else:
-            plan_parts.append(f"<p>{safe(plan_section)}</p>")
-        assess_parts = []
-        if concerns:
-            if isinstance(concerns, list):
-                concerns_val = ", ".join(safe(c) for c in concerns if c)
-            else:
-                concerns_val = safe(concerns)
-            assess_parts.append(f"<p><strong>Concerns:</strong> {concerns_val}</p>")
-        if assessment_text:
-            assess_parts.append(f"<p>{safe(assessment_text)}</p>")
-        block = (
-            '<div class="display_grid gap-16">'
-            '<div>'
-            '<h4 style="text-decoration: underline; text-underline-offset: 4px;">Assessments</h4>'
-            + "".join(assess_parts)
-            + '</div>'
-            '<div>'
-            '<h4 style="text-decoration: underline; text-underline-offset: 4px;">Plans</h4>'
-            + "".join(plan_parts)
-            + '</div>'
-            '</div>'
-        )
-        blocks.append(block)
-    return "".join(blocks)
-
-
-def render_sections(model_one_str: str, card_model_str: str) -> str:
+def render_sections(model_one_str: str) -> str:
     m1 = json.loads(model_one_str) if model_one_str else {}
-    cm = json.loads(card_model_str) if card_model_str else {}
 
     sections = [
-        (
-            "Patient History",
-            format_patient_history_model_one(m1.get("PatientHistory")),
-            format_patient_history_card_model(cm.get("PatientHistory")),
-        ),
-        ("Vitals", format_tpr_model_one(m1.get("TPR")), format_tpr_card_model(cm.get("TPR"))),
-        (
-            "Physical Exam Findings",
-            format_pef_model_one(m1.get("PhysicalExamFindings")),
-            format_pef_card_model(cm.get("PhysicalExamFindings")),
-        ),
-        (
-            "HSA",
-            "",
-            format_hsa_card_model(cm.get("HealthStatusAssessment")),
-        ),
-        (
-            "Assessment and Plan",
-            format_ap_model_one(m1.get("AssessmentAndPlan")),
-            format_ap_card_model(cm.get("AssessmentAndPlan")),
-        ),
+        ("Patient History", format_patient_history_model_one(m1.get("PatientHistory"))),
+        ("Vitals", format_tpr_model_one(m1.get("TPR"))),
+        ("Physical Exam Findings", format_pef_model_one(m1.get("PhysicalExamFindings"))),
+        ("Assessment and Plan", format_ap_model_one(m1.get("AssessmentAndPlan"))),
     ]
 
     pieces = ["<section class=\"note-section\">"]
-    for name, left, right in sections:
+    for name, content in sections:
         pieces.append(
             "<section class=\"display_grid gap-16\" style=\"margin-bottom: 16px;\">"
             f"<h3 style=\"text-decoration: underline; text-transform: uppercase; letter-spacing: 1px; text-underline-offset: 4px;\">{name}</h3>"
-            "<div class=\"display_grid grid-template-columns_1fr_1fr gap-16\">"
+            "<div>"
             "<table><thead><tr><th>Original AI Output</th></tr></thead>"
-            f"<tbody><tr><td>{left}</td></tr></tbody></table>"
-            "<table><thead><tr><th>Sent to WOOFware</th></tr></thead>"
-            f"<tbody><tr><td>{right}</td></tr></tbody></table>"
+            f"<tbody><tr><td>{content}</td></tr></tbody></table>"
             "</div></section>"
         )
     pieces.append("</section>")
@@ -331,7 +146,6 @@ def render_html(payload: dict) -> str:
             ".display_grid{display:grid}"
             ".gap-16{gap:16px}"
             ".display_flex{display:flex}"
-            ".grid-template-columns_1fr_1fr{grid-template-columns:1fr 1fr}"
             "</style>"
         ),
         "</head><body>",
@@ -379,8 +193,7 @@ def render_html(payload: dict) -> str:
 
             transcription_text = safe(scribe.get("transcriptionText"))
             section_table = render_sections(
-                scribe.get("transcriptionModelOne", ""),
-                scribe.get("transcriptionCardModel", ""),
+                scribe.get("transcriptionModelOne", "")
             )
 
             scribe_sections.append([transcription_text, section_table])
