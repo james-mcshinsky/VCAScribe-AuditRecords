@@ -2,7 +2,7 @@
 """Generate HTML reports from appointment JSON payloads.
 
 The script reads all ``.json`` or ``.txt`` files in the ``records`` directory
-and writes an HTML report for each into a matching subdirectory of
+and writes an HTML report for each into a time-stamped subdirectory of
 ``results``. It is designed to run with no command line arguments:
 
 ```
@@ -12,6 +12,7 @@ python generate_html.py
 import json
 from pathlib import Path
 from html import escape
+from datetime import datetime
 
 
 def safe(value):
@@ -291,19 +292,18 @@ def process_file(src: Path, dest: Path) -> None:
 def main() -> None:
     """Convert all files in ``records`` to HTML in ``results``."""
     src = Path("records")
-    dest = Path("results")
+    dest_root = Path("results")
 
     if not src.exists() or not src.is_dir():
         raise SystemExit("records directory not found")
 
-    dest.mkdir(parents=True, exist_ok=True)
+    run_dir = dest_root / datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     for file in src.iterdir():
         if file.suffix.lower() not in {".json", ".txt"}:
             continue
-        subdir = dest / file.stem
-        subdir.mkdir(parents=True, exist_ok=True)
-        out_file = subdir / (file.stem + ".html")
+        out_file = run_dir / (file.stem + ".html")
         process_file(file, out_file)
 
 if __name__ == "__main__":
